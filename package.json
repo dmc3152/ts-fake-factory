@@ -1,0 +1,22 @@
+{
+  "name": "ts-fake-factory",
+  "version": "0.0.1",
+  "description": "Generates mock factories for TypeScript types and interfaces",
+  "main": "index.ts",
+  "scripts": {
+    "test": "ts-node node_modules/jasmine/bin/jasmine",
+    "start": "ts-node index.ts"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/jasmine": "^5.1.4",
+    "@types/node": "^20.12.11",
+    "jasmine": "^5.1.0"
+  },
+  "dependencies": {
+    "ts-morph": "^22.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  }
+}
