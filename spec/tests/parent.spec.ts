@@ -1,15 +1,15 @@
 import { generateTypes } from "../../src/generateTypes";
 
-describe("Primitives Interface", () => {
+describe("Parent Interface", () => {
     const sut = generateTypes;
 
     it('should be true', () => {
         const expected = [
             {
-                name: 'PrimitivesInterface',
+                name: 'Parent',
                 fields: [
                     {
-                        name: 'number',
+                        name: 'id',
                         isNullable: false,
                         isReadOnly: false,
                         typeDetails: [
@@ -22,7 +22,7 @@ describe("Primitives Interface", () => {
                         ]
                     },
                     {
-                        name: 'string',
+                        name: 'name',
                         isNullable: false,
                         isReadOnly: false,
                         typeDetails: [
@@ -35,7 +35,41 @@ describe("Primitives Interface", () => {
                         ]
                     },
                     {
-                        name: 'boolean',
+                        name: 'child',
+                        isNullable: false,
+                        isReadOnly: false,
+                        typeDetails: [
+                            {
+                                name: 'Child',
+                                text: 'import("C:/Users/dmc31/.vscode/extensions/wallabyjs.wallaby-vscode-1.0.379/projects/8a21e1deec5c01f2/instrumented/spec/types/child").Child',
+                                file: 'C:/Users/dmc31/.vscode/extensions/wallabyjs.wallaby-vscode-1.0.379/projects/8a21e1deec5c01f2/instrumented/spec/types/child.ts',
+                                kind: 'InterfaceDeclaration'
+                            }
+                        ]
+                    }
+                ],
+                isInterface: true,
+                isExported: true,
+                isClass: false
+            },
+            {
+                name: 'Child',
+                fields: [
+                    {
+                        name: 'location',
+                        isNullable: false,
+                        isReadOnly: false,
+                        typeDetails: [
+                            {
+                                name: undefined,
+                                text: 'string',
+                                file: undefined,
+                                kind: undefined
+                            }
+                        ]
+                    },
+                    {
+                        name: 'isActive',
                         isNullable: false,
                         isReadOnly: false,
                         typeDetails: [
@@ -48,122 +82,39 @@ describe("Primitives Interface", () => {
                         ]
                     },
                     {
-                        name: 'object',
+                        name: 'grandchild',
                         isNullable: false,
                         isReadOnly: false,
                         typeDetails: [
                             {
-                                name: undefined,
-                                text: 'object',
-                                file: undefined,
-                                kind: undefined
+                                name: 'Grandchild',
+                                text: 'import("C:/Users/dmc31/.vscode/extensions/wallabyjs.wallaby-vscode-1.0.379/projects/8a21e1deec5c01f2/instrumented/spec/types/grandchild").Grandchild',
+                                file: 'C:/Users/dmc31/.vscode/extensions/wallabyjs.wallaby-vscode-1.0.379/projects/8a21e1deec5c01f2/instrumented/spec/types/grandchild.ts',
+                                kind: 'InterfaceDeclaration'
                             }
                         ]
-                    },
+                    }
+                ],
+                isInterface: true,
+                isExported: true,
+                isClass: false
+            },
+            {
+                name: 'Grandchild',
+                fields: [
                     {
-                        name: 'bigint',
+                        name: 'name',
                         isNullable: false,
                         isReadOnly: false,
                         typeDetails: [
                             {
                                 name: undefined,
-                                text: 'bigint',
+                                text: 'string',
                                 file: undefined,
                                 kind: undefined
                             }
                         ]
-                    },
-                    {
-                        name: 'unknown',
-                        isNullable: false,
-                        isReadOnly: false,
-                        typeDetails: [
-                            {
-                                name: undefined,
-                                text: 'unknown',
-                                file: undefined,
-                                kind: undefined
-                            }
-                        ]
-                    },
-                    {
-                        name: 'undefined',
-                        isNullable: false,
-                        isReadOnly: false,
-                        typeDetails: [
-                            {
-                                name: undefined,
-                                text: 'undefined',
-                                file: undefined,
-                                kind: undefined
-                            }
-                        ]
-                    },
-                    {
-                        name: 'null',
-                        isNullable: false,
-                        isReadOnly: false,
-                        typeDetails: [
-                            {
-                                name: undefined,
-                                text: 'null',
-                                file: undefined,
-                                kind: undefined
-                            }
-                        ]
-                    },
-                    {
-                        name: 'void',
-                        isNullable: false,
-                        isReadOnly: false,
-                        typeDetails: [
-                            {
-                                name: undefined,
-                                text: 'void',
-                                file: undefined,
-                                kind: undefined
-                            }
-                        ]
-                    },
-                    {
-                        name: 'never',
-                        isNullable: false,
-                        isReadOnly: false,
-                        typeDetails: [
-                            {
-                                name: undefined,
-                                text: 'never',
-                                file: undefined,
-                                kind: undefined
-                            }
-                        ]
-                    },
-                    {
-                        name: 'symbol',
-                        isNullable: false,
-                        isReadOnly: false,
-                        typeDetails: [
-                            {
-                                name: undefined,
-                                text: 'symbol',
-                                file: undefined,
-                                kind: undefined
-                            }
-                        ]
-                    },
-                    {
-                        name: 'any',
-                        isNullable: false,
-                        isReadOnly: false,
-                        typeDetails: [
-                            {
-                                name: undefined,
-                                text: 'any',
-                                file: undefined,
-                                kind: undefined
-                            }
-                        ]
-                    },
+                    }
                 ],
                 isInterface: true,
                 isExported: true,
@@ -171,10 +122,11 @@ describe("Primitives Interface", () => {
             }
         ]
 
-        const actual = sut("spec/types/primitivesInterface.ts");
+        const actual = sut("spec/types/parent.ts");
 
         let index = 0;
         actual.forEach((value) => {
+            console.log(value);
             expect(value.name).toBe(expected[index].name);
             expect(value.isInterface).toBe(expected[index].isInterface);
             expect(value.isExported).toBe(expected[index].isExported);

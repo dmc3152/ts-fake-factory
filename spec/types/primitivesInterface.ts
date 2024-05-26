@@ -1,5 +1,5 @@
 export interface PrimitivesInterface {
-    number: number | string
+    number: number
     string: string
     boolean: boolean
     object: object
