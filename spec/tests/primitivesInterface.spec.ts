@@ -1,7 +1,7 @@
-import { generateTypes } from "../../src/generateTypes";
+import { TypeParser } from "../../src/typeParser";
 
 describe("Primitives Interface", () => {
-    const sut = generateTypes;
+    const sut = new TypeParser();
 
     it('should be true', () => {
         const expected = [
@@ -126,19 +126,6 @@ describe("Primitives Interface", () => {
                         ]
                     },
                     {
-                        name: 'never',
-                        isNullable: false,
-                        isReadOnly: false,
-                        typeDetails: [
-                            {
-                                name: undefined,
-                                text: 'never',
-                                file: undefined,
-                                kind: undefined
-                            }
-                        ]
-                    },
-                    {
                         name: 'symbol',
                         isNullable: false,
                         isReadOnly: false,
@@ -171,7 +158,7 @@ describe("Primitives Interface", () => {
             }
         ]
 
-        const actual = sut("spec/types/primitivesInterface.ts");
+        const actual = sut.generateTypes("spec/types/primitivesInterface.ts");
 
         let index = 0;
         actual.forEach((value) => {
@@ -181,7 +168,7 @@ describe("Primitives Interface", () => {
             expect(value.isClass).toBe(expected[index].isClass);
             value.fields.forEach((field, i) => {
                 expect(field.name).toBe(expected[index].fields[i].name);
-                expect(field.isNullable).toBe(expected[index].fields[i].isNullable);
+                expect(field.isRequired).toBe(expected[index].fields[i].isNullable);
                 expect(field.isReadOnly).toBe(expected[index].fields[i].isReadOnly);
                 field.typeDetails.forEach((detail, j) => {
                     expect(detail.name).toBe(expected[index].fields[i].typeDetails[j].name);

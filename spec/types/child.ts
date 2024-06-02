@@ -1,7 +1,7 @@
-import { Grandchild } from "./grandchild"
+import { Grandchild } from "./grandchild";
 
 export interface Child {
-    location: string
-    isActive: boolean
-    grandchild: Grandchild
-}
+	location: string
+	isActive: boolean
+	grandchild: Grandchild
+};

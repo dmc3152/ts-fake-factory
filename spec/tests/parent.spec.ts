@@ -1,7 +1,12 @@
-import { generateTypes } from "../../src/generateTypes";
+import { ParentMock } from "../../generated/spec/types/parent";
+import { TypeParser } from "../../src/typeParser";
 
 describe("Parent Interface", () => {
-    const sut = generateTypes;
+    const sut = new TypeParser();
+
+    const parentMock = ParentMock.hydrated();
+    console.log(parentMock);
+    console.log(parentMock.child.grandchild.ancestor);
 
     it('should be true', () => {
         const expected = [
@@ -122,7 +127,7 @@ describe("Parent Interface", () => {
             }
         ]
 
-        const actual = sut("spec/types/parent.ts");
+        const actual = sut.generateTypes("spec/types/parent.ts");
 
         let index = 0;
         actual.forEach((value) => {
@@ -133,7 +138,7 @@ describe("Parent Interface", () => {
             expect(value.isClass).toBe(expected[index].isClass);
             value.fields.forEach((field, i) => {
                 expect(field.name).toBe(expected[index].fields[i].name);
-                expect(field.isNullable).toBe(expected[index].fields[i].isNullable);
+                expect(field.isRequired).toBe(expected[index].fields[i].isNullable);
                 expect(field.isReadOnly).toBe(expected[index].fields[i].isReadOnly);
                 field.typeDetails.forEach((detail, j) => {
                     expect(detail.name).toBe(expected[index].fields[i].typeDetails[j].name);

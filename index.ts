@@ -1,10 +1,17 @@
-import { generateTypes } from "./src/generateTypes";
+import path from "path";
+import { FactoryWriter } from "./src/factoryWriter";
+import { TypeParser } from "./src/typeParser";
 
 // const generatedTypes = generateTypes("src/*.ts");
-const generatedTypes = generateTypes("spec/types/primitivesInterface.ts");
-generatedTypes.forEach(value => {
-    console.log(value.fields);
-});
+const typeParser = new TypeParser();
+const generatedTypes = typeParser.generateTypes("spec/types/*");
+// const generatedTypes = typeParser.generateTypes("spec/types/primitivesInterface.ts");
+// generatedTypes.forEach(value => {
+//     console.log(value.fields);
+// });
+
+const factoryWriter = new FactoryWriter();
+factoryWriter.writeTypeMapFactory(generatedTypes, path.join(__dirname, 'generated'));
 
 // printMap(typeMap);
 

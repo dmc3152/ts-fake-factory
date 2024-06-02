@@ -1,7 +1,7 @@
-import { Child } from "./child"
+import { Child } from "./child";
 
 export interface Parent {
-    id: number
-    name: string
-    child: Child
-}
+	id: number
+	name: string
+	child: Child
+};
