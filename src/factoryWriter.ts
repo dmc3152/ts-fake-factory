@@ -101,7 +101,7 @@ export class FactoryWriter {
                     });
 
                     if (typeDetails.length > 0) {
-                        const hydratedValue = this.generateHydratedValue(typeDetails);
+                        const hydratedValue = this.generateValue(typeDetails, true, field.isTuple, field.isArray, field.isObject);
                         hydratedText += `\t\t\t${field.name}: ${hydratedValue},\n`;
                         
                         if (hasUndefined && field.isRequired) {
@@ -111,7 +111,7 @@ export class FactoryWriter {
                             bareText += `\t\t\t${field.name}: null,\n`;
                         }
                         else if (!hasUndefined) {
-                            const bareValue = this.generateBareValue(typeDetails);
+                            const bareValue = this.generateValue(typeDetails, false, field.isTuple, field.isArray, field.isObject);
                             bareText += `\t\t\t${field.name}: ${bareValue},\n`;
                         }
                     }
@@ -147,53 +147,19 @@ export class FactoryWriter {
         return output;
     }
 
-    generateHydratedValue = (typeDetails: TypeFieldDetails[]): string => {
-        let fieldText = '';
-
-        if (typeDetails.length > 1) {
-            fieldText += 'faker.helpers.arrayElement([';
-        }
-
-        fieldText += typeDetails.reduce((finalText, detail) => {
-            if (detail.isInterface) finalText += `${detail.name}Mock.hydrated({}, [...stack, this._id])`;
-            else if (detail.isLiteral) finalText += detail.text;
-            else if (detail.text === 'number') finalText += 5;
-            else if (detail.text === 'string') finalText += "'string'";
-            else if (detail.text === 'boolean') finalText += true;
-            else if (detail.text === 'object') finalText += `{}`;
-            else if (detail.text === 'bigint') finalText += `BigInt(99999999999)`;
-            else if (detail.text === 'unknown') finalText += `{}`;
-            else if (detail.text === 'undefined') finalText += undefined;
-            else if (detail.text === 'null') finalText += null;
-            else if (detail.text === 'void') finalText += undefined;
-            else if (detail.text === 'never') finalText += undefined;
-            else if (detail.text === 'symbol') finalText += `Symbol()`;
-            else if (detail.text === 'any') finalText += `{}`;
-            return finalText;
-        }, '');
-
-        if (typeDetails.length > 1) {
-            fieldText += '])';
-        }
-
-        return fieldText;
-    }
-
-    generateBareValue = (typeDetails: TypeFieldDetails[]): string => {
-        let fieldText = '';
-
-        if (typeDetails.length > 1) {
-            fieldText += 'faker.helpers.arrayElement([';
-        }
-
-        const textValues = typeDetails.reduce((textArray, detail) => {
-            if (detail.isInterface) textArray.push(`${detail.name}Mock.bare({}, [...stack, this._id])`);
-            else if (detail.isLiteral) textArray.push(detail.text?.toString() || '');
-            else if (detail.text === 'number') textArray.push(`5`);
-            else if (detail.text === 'string') textArray.push("'string'");
-            else if (detail.text === 'boolean') textArray.push(`true`);
+    writeTypeDetails = (typeDetails: TypeFieldDetails[], isHydrated: boolean, isObject: boolean): string => {
+        return typeDetails.reduce((textArray, detail) => {
+            if (detail.isInterface) textArray.push(`${detail.name}Mock.${isHydrated ? 'hydrated' : 'bare'}({}, [...stack, this._id])`);
+            else if (detail.isLiteral) textArray.push(typeof detail.text === 'string' ? `'${detail.text}'` : `${detail.text}`);
+            else if (detail.isTuple && detail.nestedTypeDetails?.length) textArray.push(this.generateValue(detail.nestedTypeDetails, isHydrated, true, false, false));
+            else if (detail.isArray && detail.nestedTypeDetails?.length) textArray.push(this.generateValue(detail.nestedTypeDetails, isHydrated, false, true, false));
+            else if (detail.isObject && detail.nestedTypeDetails?.length) textArray.push(`${detail.name}: ${this.generateValue(detail.nestedTypeDetails, isHydrated, false, false, true)}`);
+            else if (isObject) textArray.push(`${detail.name}: ${this.writeTypeDetails([detail], isHydrated, detail.isObject)}`);
+            else if (detail.text === 'number') textArray.push(`faker.number.int()`);
+            else if (detail.text === 'string') textArray.push(`faker.string.alphanumeric()`);
+            else if (detail.text === 'boolean') textArray.push(`faker.datatype.boolean()`);
             else if (detail.text === 'object') textArray.push(`{}`);
-            else if (detail.text === 'bigint') textArray.push(`BigInt(99999999999)`);
+            else if (detail.text === 'bigint') textArray.push(`faker.number.bigInt()`);
             else if (detail.text === 'unknown') textArray.push(`{}`);
             else if (detail.text === 'undefined') textArray.push(`undefined`);
             else if (detail.text === 'null') textArray.push(`null`);
@@ -202,12 +168,42 @@ export class FactoryWriter {
             else if (detail.text === 'symbol') textArray.push(`Symbol()`);
             else if (detail.text === 'any') textArray.push(`{}`);
             return textArray;
-        }, [] as string[]);
+        }, [] as string[]).join(', ');
+    }
 
-        fieldText += textValues.join(', ');
+    generateValue = (typeDetails: TypeFieldDetails[], isHydrated: boolean, isTuple: boolean, isArray: boolean, isObject: boolean): string => {
+        let fieldText = '';
 
-        if (typeDetails.length > 1) {
-            fieldText += '])';
+        if (isObject) {
+            fieldText += '{';
+        }
+        else if (typeDetails.length > 1) {
+            if (isTuple) {
+                fieldText += '[';
+            }
+            else {
+                fieldText += 'faker.helpers.arrayElement([';
+            }
+        }
+        else if (isArray) {
+            fieldText += 'Array.from({ length: 3 }, () => ';
+        }
+
+        fieldText += this.writeTypeDetails(typeDetails, isHydrated, isObject);
+
+        if (isObject) {
+            fieldText += '}';
+        }
+        else if (typeDetails.length > 1) {
+            if (isTuple) {
+                fieldText += ']';
+            }
+            else {
+                fieldText += '])';
+            }
+        }
+        else if (isArray) {
+            fieldText += ')';
         }
 
         return fieldText;
@@ -235,12 +231,14 @@ export class FactoryWriter {
     };
 
     buildImportsFromMap = (importMap: Map<string, Set<string>>): string => {
-        return Array.from(importMap).reduce((imports, [file, values]) => {
+        let imports = Array.from(importMap).reduce((imports, [file, values]) => {
             const fileName = file.replace(/.ts$/, '');
             const importValues = Array.from(values).join(', ');
-            imports += `import { ${importValues} } from "${fileName}"\n`;
+            imports += `import { ${importValues} } from "${fileName}";\n`;
             return imports;
         }, '');
+        imports += 'import { faker } from "@faker-js/faker";\n';
+        return imports;
     }
 }
 

@@ -1,12 +1,7 @@
-import { ParentMock } from "../../generated/spec/types/parent";
 import { TypeParser } from "../../src/typeParser";
 
 describe("Parent Interface", () => {
     const sut = new TypeParser();
-
-    const parentMock = ParentMock.hydrated();
-    console.log(parentMock);
-    console.log(parentMock.child.grandchild.ancestor);
 
     it('should be true', () => {
         const expected = [
@@ -15,7 +10,7 @@ describe("Parent Interface", () => {
                 fields: [
                     {
                         name: 'id',
-                        isNullable: false,
+                        isRequired: true,
                         isReadOnly: false,
                         typeDetails: [
                             {
@@ -28,7 +23,7 @@ describe("Parent Interface", () => {
                     },
                     {
                         name: 'name',
-                        isNullable: false,
+                        isRequired: true,
                         isReadOnly: false,
                         typeDetails: [
                             {
@@ -41,7 +36,7 @@ describe("Parent Interface", () => {
                     },
                     {
                         name: 'child',
-                        isNullable: false,
+                        isRequired: true,
                         isReadOnly: false,
                         typeDetails: [
                             {
@@ -62,7 +57,7 @@ describe("Parent Interface", () => {
                 fields: [
                     {
                         name: 'location',
-                        isNullable: false,
+                        isRequired: true,
                         isReadOnly: false,
                         typeDetails: [
                             {
@@ -75,7 +70,7 @@ describe("Parent Interface", () => {
                     },
                     {
                         name: 'isActive',
-                        isNullable: false,
+                        isRequired: true,
                         isReadOnly: false,
                         typeDetails: [
                             {
@@ -88,7 +83,7 @@ describe("Parent Interface", () => {
                     },
                     {
                         name: 'grandchild',
-                        isNullable: false,
+                        isRequired: true,
                         isReadOnly: false,
                         typeDetails: [
                             {
@@ -109,7 +104,7 @@ describe("Parent Interface", () => {
                 fields: [
                     {
                         name: 'name',
-                        isNullable: false,
+                        isRequired: true,
                         isReadOnly: false,
                         typeDetails: [
                             {
@@ -138,7 +133,7 @@ describe("Parent Interface", () => {
             expect(value.isClass).toBe(expected[index].isClass);
             value.fields.forEach((field, i) => {
                 expect(field.name).toBe(expected[index].fields[i].name);
-                expect(field.isRequired).toBe(expected[index].fields[i].isNullable);
+                expect(field.isRequired).toBe(expected[index].fields[i].isRequired);
                 expect(field.isReadOnly).toBe(expected[index].fields[i].isReadOnly);
                 field.typeDetails.forEach((detail, j) => {
                     expect(detail.name).toBe(expected[index].fields[i].typeDetails[j].name);

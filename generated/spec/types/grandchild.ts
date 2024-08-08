@@ -1,5 +1,4 @@
 import { Grandchild } from "../../../spec/types/grandchild"
-import { ParentMock } from "./parent"
 
 export class GrandchildMock {
 	private static _id = "C:/code/ts-fake-factory/spec/types/grandchild.ts-Grandchild";
@@ -14,7 +13,6 @@ export class GrandchildMock {
 
 		const mock: Grandchild = {
 			name: 'string',
-			ancestor: ParentMock.hydrated({}, [...stack, this._id]),
 			...overrides
 		};
 

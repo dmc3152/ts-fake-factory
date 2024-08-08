@@ -10,7 +10,7 @@ describe("Primitives Interface", () => {
                 fields: [
                     {
                         name: 'number',
-                        isNullable: false,
+                        isRequired: true,
                         isReadOnly: false,
                         typeDetails: [
                             {
@@ -23,7 +23,7 @@ describe("Primitives Interface", () => {
                     },
                     {
                         name: 'string',
-                        isNullable: false,
+                        isRequired: true,
                         isReadOnly: false,
                         typeDetails: [
                             {
@@ -36,7 +36,7 @@ describe("Primitives Interface", () => {
                     },
                     {
                         name: 'boolean',
-                        isNullable: false,
+                        isRequired: true,
                         isReadOnly: false,
                         typeDetails: [
                             {
@@ -49,7 +49,7 @@ describe("Primitives Interface", () => {
                     },
                     {
                         name: 'object',
-                        isNullable: false,
+                        isRequired: true,
                         isReadOnly: false,
                         typeDetails: [
                             {
@@ -62,7 +62,7 @@ describe("Primitives Interface", () => {
                     },
                     {
                         name: 'bigint',
-                        isNullable: false,
+                        isRequired: true,
                         isReadOnly: false,
                         typeDetails: [
                             {
@@ -75,7 +75,7 @@ describe("Primitives Interface", () => {
                     },
                     {
                         name: 'unknown',
-                        isNullable: false,
+                        isRequired: true,
                         isReadOnly: false,
                         typeDetails: [
                             {
@@ -88,7 +88,7 @@ describe("Primitives Interface", () => {
                     },
                     {
                         name: 'undefined',
-                        isNullable: false,
+                        isRequired: true,
                         isReadOnly: false,
                         typeDetails: [
                             {
@@ -101,7 +101,7 @@ describe("Primitives Interface", () => {
                     },
                     {
                         name: 'null',
-                        isNullable: false,
+                        isRequired: true,
                         isReadOnly: false,
                         typeDetails: [
                             {
@@ -114,7 +114,7 @@ describe("Primitives Interface", () => {
                     },
                     {
                         name: 'void',
-                        isNullable: false,
+                        isRequired: true,
                         isReadOnly: false,
                         typeDetails: [
                             {
@@ -127,7 +127,7 @@ describe("Primitives Interface", () => {
                     },
                     {
                         name: 'symbol',
-                        isNullable: false,
+                        isRequired: true,
                         isReadOnly: false,
                         typeDetails: [
                             {
@@ -140,7 +140,7 @@ describe("Primitives Interface", () => {
                     },
                     {
                         name: 'any',
-                        isNullable: false,
+                        isRequired: true,
                         isReadOnly: false,
                         typeDetails: [
                             {
@@ -168,7 +168,7 @@ describe("Primitives Interface", () => {
             expect(value.isClass).toBe(expected[index].isClass);
             value.fields.forEach((field, i) => {
                 expect(field.name).toBe(expected[index].fields[i].name);
-                expect(field.isRequired).toBe(expected[index].fields[i].isNullable);
+                expect(field.isRequired).toBe(expected[index].fields[i].isRequired);
                 expect(field.isReadOnly).toBe(expected[index].fields[i].isReadOnly);
                 field.typeDetails.forEach((detail, j) => {
                     expect(detail.name).toBe(expected[index].fields[i].typeDetails[j].name);

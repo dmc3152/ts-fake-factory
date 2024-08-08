@@ -14,16 +14,26 @@ export class TypeParser {
         return false;
     }
 
-    determineTypeText = (fieldType: Type<ts.Type>): TypeText | TypeText[] | undefined => {
+    determineTypeText = (fieldType: Type<ts.Type>): { text: TypeText | TypeText[] | undefined, typeDetails?: TypeFieldDetails[] } => {
         let primitive: TypeText | TypeText[] | undefined = fieldType.getText();
-        if (this.isPrimitiveType(primitive)) return primitive;
-        // TODO: enum, tuple, literal
-        if (fieldType.isBooleanLiteral()) return primitive;
+        // console.log(fieldType.getSymbol()?.getName(), primitive)
+        if (this.isPrimitiveType(primitive)) return { text: primitive };
+        // TODO: enum (need to import enum if exported, otherwise rebuild the enum in the file - needed for literals as well)
+        if (fieldType.isBooleanLiteral()) return { text: primitive };
         if (fieldType.isLiteral()) primitive = fieldType.getLiteralValue();
-        if (fieldType.isArray() && primitive) primitive = [primitive];
+        if (fieldType.isArray()) return { text: primitive, typeDetails: fieldType.getArrayElementType() ? [this.mapTypeDetails(fieldType.getArrayElementType()!)] : undefined};
+        if (fieldType.isTuple()) return { text: primitive, typeDetails: fieldType.getTupleElements().map(x => this.mapTypeDetails(x)) };
+        if (fieldType.isObject()) return {
+            text: primitive, typeDetails: fieldType.getProperties().reduce((declarations, property) => {
+                const declarationType = property.getDeclarations().pop();
+                if (declarationType) {
+                    declarations.push(this.mapTypeDetails(declarationType));
+                }
+                return declarations;
+            }, [] as TypeFieldDetails[])};
         // console.log(fieldType.getText());
         // console.log(primitive);
-        return primitive;
+        return { text: primitive };
     }
 
     isNativeType = (fieldType: Type<ts.Type>): boolean => {
@@ -38,11 +48,29 @@ export class TypeParser {
             || fieldType.isUnknown()
     }
 
-    buildFieldFromProperty = (node: PropertyDeclaration | PropertySignature): TypeField => {
+    extractListOfTypesFromPropertyNode = (node: PropertyDeclaration | PropertySignature): (Type<ts.Type> | Node<ts.Node>)[] => {
+        // console.log('method called');
         const nodeSymbol = node.getType().getSymbol();
-        let typeList: (Type<ts.Type> | Node<ts.Node>)[] = [];
-        if (node.getType().isUnion()) {
-            typeList = node.getType().getUnionTypes().reduce((declarations, union) => {
+        if (node.getType().isObject()) {
+            return node.getType().getProperties().reduce((declarations, property) => {
+                const declarationType = property.getDeclarations().pop();
+                if (declarationType) {
+                    declarations.push(declarationType);
+                }
+                return declarations;
+            }, [] as (Type<ts.Type> | Node<ts.Node>)[])
+        }
+        else if (node.getType().isArray()) {
+            const arrayElementType = node.getType().getArrayElementType();
+            if (arrayElementType) {
+                return [arrayElementType];
+            }
+            else {
+                return [];
+            }
+        }
+        else if (node.getType().isUnion()) {
+            return node.getType().getUnionTypes().reduce((declarations, union) => {
                 const declarationType = union.getSymbol()?.getDeclarations().pop();
                 if (declarationType) {
                     declarations.push(declarationType);
@@ -53,58 +81,41 @@ export class TypeParser {
                 return declarations;
             }, [] as (Type<ts.Type> | Node<ts.Node>)[])
         }
+        else if (node.getType().isTuple()) {
+            return node.getType().getTupleElements().reduce((declarations, tuple) => {
+                const declarationType = tuple.getSymbol()?.getDeclarations().pop();
+                if (declarationType) {
+                    declarations.push(declarationType);
+                }
+                else {
+                    declarations.push(tuple);
+                }
+                return declarations;
+            }, [] as (Type<ts.Type> | Node<ts.Node>)[])
+        }
         else if (nodeSymbol) {
-            typeList = [nodeSymbol.getDeclarations()[0] || node.getType()];
+            return [nodeSymbol.getDeclarations()[0] || node.getType()];
         }
         else {
-            typeList = [node.getType()];
+            return [node.getType()];
         }
+    }
 
-        let typeDetails = typeList.map(declarationType => {
-            let details: TypeFieldDetails = {
-                name: undefined,
-                text: undefined,
-                file: undefined,
-                kind: undefined,
-                isPrimitive: false,
-                isLiteral: false,
-                isInterface: false,
-                isClass: false
-            }
-            if (declarationType instanceof Node) {
-                const typeDef = declarationType.getType();
-                const isNativeType = this.isNativeType(typeDef);
-                details = {
-                    name: typeDef.getSymbol()?.getName(),
-                    text: this.determineTypeText(typeDef),
-                    file: isNativeType ? undefined : declarationType.getSourceFile().getFilePath(),
-                    kind: declarationType.getKindName(),
-                    isClass: typeDef.isClass(),
-                    isInterface: typeDef.isInterface(),
-                    isPrimitive: this.isPrimitiveType(typeDef),
-                    isLiteral: typeDef.isLiteral()
-                }
-            }
-            else {
-                details.text = this.determineTypeText(declarationType);
-                details.isPrimitive = this.isPrimitiveType(declarationType);
-                details.isLiteral = declarationType.isLiteral();
-            }
-            return details;
-        });
-
+    combineBooleanTypeDetails = (typeDetails: TypeFieldDetails[]): TypeFieldDetails[] => {
         const booleanLiteralIndexes: { true: number[], false: number[] } = {
             true: [],
             false: []
         };
-        typeDetails = typeDetails.reduce((details, item, index) => {
+
+        const combinedTypeDetails = typeDetails.reduce((details, item, index) => {
             if (item.text === 'false') booleanLiteralIndexes.false.push(index);
             else if (item.text === 'true') booleanLiteralIndexes.true.push(index);
             else details.push(item);
             return details;
-        }, [] as typeof typeDetails);
+        }, [] as TypeFieldDetails[]);
+        
         if (booleanLiteralIndexes.true.length && booleanLiteralIndexes.false.length) {
-            typeDetails.push({
+            combinedTypeDetails.push({
                 text: 'boolean',
                 name: undefined,
                 file: undefined,
@@ -112,11 +123,14 @@ export class TypeParser {
                 isClass: false,
                 isInterface: false,
                 isLiteral: false,
-                isPrimitive: true
+                isPrimitive: true,
+                isTuple: false,
+                isArray: false,
+                isObject: false,
             });
         }
         else if (booleanLiteralIndexes.true.length) {
-            typeDetails.push({
+            combinedTypeDetails.push({
                 text: 'true',
                 name: undefined,
                 file: undefined,
@@ -124,11 +138,14 @@ export class TypeParser {
                 isClass: false,
                 isInterface: false,
                 isLiteral: true,
-                isPrimitive: false
+                isPrimitive: false,
+                isTuple: false,
+                isArray: false,
+                isObject: false,
             })
         }
         else if (booleanLiteralIndexes.false.length) {
-            typeDetails.push({
+            combinedTypeDetails.push({
                 text: 'false',
                 name: undefined,
                 file: undefined,
@@ -136,12 +153,68 @@ export class TypeParser {
                 isClass: false,
                 isInterface: false,
                 isLiteral: true,
-                isPrimitive: false
+                isPrimitive: false,
+                isTuple: false,
+                isArray: false,
+                isObject: false,
             })
         }
 
-        if (node.getQuestionTokenNode() !== undefined && !typeDetails.some(x => x.text === 'undefined')) {
-            typeDetails.push({
+        return combinedTypeDetails;
+    }
+
+    mapTypeDetails = (declarationType: Type<ts.Type> | Node<ts.Node>): TypeFieldDetails => {
+        let details: TypeFieldDetails = {
+            name: declarationType.getSymbol()?.getName(),
+            text: undefined,
+            file: undefined,
+            kind: undefined,
+            isPrimitive: false,
+            isLiteral: false,
+            isInterface: false,
+            isClass: false,
+            isTuple: false,
+            isArray: false,
+            isObject: false,
+        }
+        if (declarationType instanceof Node) {
+            const typeDef = declarationType.getType();
+            const isNativeType = this.isNativeType(typeDef);
+            const { text, typeDetails } = this.determineTypeText(typeDef);
+            details = {
+                name: declarationType.getSymbol()?.getName(),
+                text: text,
+                nestedTypeDetails: typeDetails,
+                file: isNativeType || typeDef.isObject() ? undefined : declarationType.getSourceFile().getFilePath(),
+                kind: declarationType.getKindName(),
+                isClass: typeDef.isClass(),
+                isInterface: typeDef.isInterface(),
+                isPrimitive: this.isPrimitiveType(typeDef),
+                isLiteral: typeDef.isLiteral(),
+                isTuple: typeDef.isTuple(),
+                isArray: typeDef.isArray(),
+                isObject: typeDef.isObject(),
+            }
+        }
+        else {
+            const { text, typeDetails } = this.determineTypeText(declarationType);
+            details.text = text;
+            details.nestedTypeDetails = typeDetails;
+            details.isPrimitive = this.isPrimitiveType(declarationType);
+            details.isLiteral = declarationType.isLiteral();
+            details.isTuple = declarationType.isTuple();
+            details.isArray = declarationType.isArray();
+            details.isObject = declarationType.isObject();
+        }
+        return details;
+    }
+
+    handleOptionalTypeDetails = (node: PropertyDeclaration | PropertySignature, typeDetails: TypeFieldDetails[]): TypeFieldDetails[] => {
+        if (node.getQuestionTokenNode() === undefined || typeDetails.some(x => x.text === 'undefined')) return [...typeDetails];
+        
+        return [
+            ...typeDetails,
+            {
                 text: 'undefined',
                 name: undefined,
                 file: undefined,
@@ -149,10 +222,21 @@ export class TypeParser {
                 isClass: false,
                 isInterface: false,
                 isLiteral: true,
-                isPrimitive: false
-            })
-        }
+                isPrimitive: false,
+                isTuple: false,
+                isArray: false,
+                isObject: false,
+            }
+        ];
+    }
 
+    buildFieldFromProperty = (node: PropertyDeclaration | PropertySignature): TypeField => {
+        const typeList = this.extractListOfTypesFromPropertyNode(node);
+        const typeDetails = typeList.map(declarationType => this.mapTypeDetails(declarationType));
+        // console.log(typeDetails)
+        const booleanHandledTypeDetails = this.combineBooleanTypeDetails(typeDetails);
+        const optionalHandledTypeDetails = this.handleOptionalTypeDetails(node, booleanHandledTypeDetails);
+        
         // console.log(typeDetails)
         // node.getType().getSymbol()?.getDeclarations().forEach(x => {
         //     const sourceFile = x.getSourceFile();
@@ -183,14 +267,17 @@ export class TypeParser {
         // console.log(foundClass?.getName(), foundClass?.getKindName())
         return {
             name: node.getName(),
-            typeDetails,
+            typeDetails: optionalHandledTypeDetails,
             // type: node.getType(),
             isRequired: node.getQuestionTokenNode() === undefined,
-            isReadOnly: node.isReadonly()
+            isReadOnly: node.isReadonly(),
+            isTuple: node.getType().isTuple(),
+            isArray: node.getType().isArray(),
+            isObject: node.getType().isObject(),
         };
     }
 
-    createProjectWithFiles = (file: string) => {
+    createProjectFromFiles = (file: string) => {
         const project = new Project();
 
         project.addSourceFilesAtPaths(file);
@@ -266,7 +353,7 @@ export class TypeParser {
     generateTypes = (file: string) => {
         let typeMap = new Map<string, TypesOutline>();
 
-        const project = this.createProjectWithFiles(file);
+        const project = this.createProjectFromFiles(file);
         const sourceFiles = project.getSourceFiles();
 
         sourceFiles.forEach(sourceFile => {
@@ -277,14 +364,18 @@ export class TypeParser {
             }
         })
 
+        printMap(typeMap);
         return typeMap;
     };
 }
 
 const printMap = (map: Map<string, TypesOutline>) => {
     [...map.entries()].forEach(entry => {
-        console.log(entry[0]);
+        // console.log(entry[0]);
         console.log(entry[1], entry[1].fields);
+        entry[1].fields.forEach(field => {
+            console.log(field.typeDetails);
+        })
     })
 }
 
@@ -303,15 +394,22 @@ export type TypeField = {
     type?: Type<ts.Type>
     isRequired: boolean
     isReadOnly: boolean
+    isTuple: boolean
+    isArray: boolean
+    isObject: boolean
 }
 
 export type TypeFieldDetails = {
     name?: string
     text?: TypeText | TypeText[]
+    nestedTypeDetails?: TypeFieldDetails[]
     file?: string
     kind?: string
     isPrimitive: boolean
     isLiteral: boolean
     isInterface: boolean
     isClass: boolean
+    isArray: boolean
+    isTuple: boolean
+    isObject: boolean
 }
