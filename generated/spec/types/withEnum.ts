@@ -1,4 +1,4 @@
-import { Enum, withEnum } from "../../../spec/types/withEnum";
+import { withEnum, TestEnum } from "../../../spec/types/withEnum";
 import { faker } from "@faker-js/faker";
 
 export class withEnumMock {
@@ -13,8 +13,8 @@ export class withEnumMock {
 		}
 
 		const mock: withEnum = {
-			name: 'string',
-			enum: faker.helpers.arrayElement([1, 2, 3, Enum.Four]),
+			name: faker.string.alphanumeric(),
+			enum: faker.helpers.arrayElement([TestEnum.One, TestEnum.Two, TestEnum.Three, TestEnum.Four]),
 			...overrides
 		};
 
@@ -28,8 +28,8 @@ export class withEnumMock {
 		}
 
 		const mock: withEnum = {
-			name: 'string',
-			enum: faker.helpers.arrayElement([1, 2, 3, 'four']),
+			name: faker.string.alphanumeric(),
+			enum: faker.helpers.arrayElement([TestEnum.One, TestEnum.Two, TestEnum.Three, TestEnum.Four]),
 			...overrides
 		};
 

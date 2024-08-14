@@ -1,4 +1,4 @@
-import { InterfaceDeclaration, Project, PropertyDeclaration, PropertySignature, Type, ts, Node, SourceFile } from "ts-morph";
+import { InterfaceDeclaration, Project, PropertyDeclaration, PropertySignature, Type, ts, Node, SourceFile, SyntaxKind } from "ts-morph";
 
 type PrimitiveType = "string" | "number" | "boolean" | "object" | "bigint" | "unknown" | "undefined" | "null" | "void" | "never" | "symbol" | "any";
 type TypeText = PrimitiveType | string | number | ts.PseudoBigInt;
@@ -16,9 +16,14 @@ export class TypeParser {
 
     determineTypeText = (fieldType: Type<ts.Type>): { text: TypeText | TypeText[] | undefined, typeDetails?: TypeFieldDetails[] } => {
         let primitive: TypeText | TypeText[] | undefined = fieldType.getText();
-        // console.log(fieldType.getSymbol()?.getName(), primitive)
         if (this.isPrimitiveType(primitive)) return { text: primitive };
-        // TODO: enum (need to import enum if exported, otherwise rebuild the enum in the file - needed for literals as well)
+        // TODO: investigate literals support
+        if (fieldType.isEnumLiteral()) {
+            const enumName = fieldType.getBaseTypeOfLiteralType().getSymbol()?.getName()!;
+            const enumKey = fieldType.getSymbol()?.getName();
+            const enumValue = `${enumName}.${enumKey}`;
+            return { text: enumValue };
+        }
         if (fieldType.isBooleanLiteral()) return { text: primitive };
         if (fieldType.isLiteral()) primitive = fieldType.getLiteralValue();
         if (fieldType.isArray()) return { text: primitive, typeDetails: fieldType.getArrayElementType() ? [this.mapTypeDetails(fieldType.getArrayElementType()!)] : undefined};
@@ -123,6 +128,7 @@ export class TypeParser {
                 isClass: false,
                 isInterface: false,
                 isLiteral: false,
+                isEnumLiteral: false,
                 isPrimitive: true,
                 isTuple: false,
                 isArray: false,
@@ -138,6 +144,7 @@ export class TypeParser {
                 isClass: false,
                 isInterface: false,
                 isLiteral: true,
+                isEnumLiteral: false,
                 isPrimitive: false,
                 isTuple: false,
                 isArray: false,
@@ -153,6 +160,7 @@ export class TypeParser {
                 isClass: false,
                 isInterface: false,
                 isLiteral: true,
+                isEnumLiteral: false,
                 isPrimitive: false,
                 isTuple: false,
                 isArray: false,
@@ -171,6 +179,7 @@ export class TypeParser {
             kind: undefined,
             isPrimitive: false,
             isLiteral: false,
+            isEnumLiteral: false,
             isInterface: false,
             isClass: false,
             isTuple: false,
@@ -181,16 +190,33 @@ export class TypeParser {
             const typeDef = declarationType.getType();
             const isNativeType = this.isNativeType(typeDef);
             const { text, typeDetails } = this.determineTypeText(typeDef);
+            let enumDefinition: string | undefined;
+            let name = declarationType.getSymbol()?.getName();
+            let enumFile: string | undefined;
+            if (typeDef.isEnumLiteral()) {
+                const enumName = typeDef.getBaseTypeOfLiteralType().getSymbol()?.getName()!;
+                const enumDeclaration = typeDef.getSymbol()?.getValueDeclaration()?.getSourceFile().getEnum(enumName)!;
+                const isExported = enumDeclaration?.isExported();
+                const filePath = enumDeclaration?.getSourceFile().getFilePath();
+                const enumText = enumDeclaration?.getText();
+                enumDefinition = isExported ? undefined : enumText;
+                enumFile = isExported ? filePath : undefined;
+                name = enumName;
+                // console.log(fileString);
+            }
             details = {
-                name: declarationType.getSymbol()?.getName(),
-                text: text,
+                name,
+                text,
                 nestedTypeDetails: typeDetails,
                 file: isNativeType || typeDef.isObject() ? undefined : declarationType.getSourceFile().getFilePath(),
+                enumFile,
                 kind: declarationType.getKindName(),
+                enumDefinition,
                 isClass: typeDef.isClass(),
                 isInterface: typeDef.isInterface(),
                 isPrimitive: this.isPrimitiveType(typeDef),
                 isLiteral: typeDef.isLiteral(),
+                isEnumLiteral: typeDef.isEnumLiteral(),
                 isTuple: typeDef.isTuple(),
                 isArray: typeDef.isArray(),
                 isObject: typeDef.isObject(),
@@ -202,10 +228,12 @@ export class TypeParser {
             details.nestedTypeDetails = typeDetails;
             details.isPrimitive = this.isPrimitiveType(declarationType);
             details.isLiteral = declarationType.isLiteral();
+            details.isEnumLiteral = declarationType.isEnumLiteral();
             details.isTuple = declarationType.isTuple();
             details.isArray = declarationType.isArray();
             details.isObject = declarationType.isObject();
         }
+        // console.log(details);
         return details;
     }
 
@@ -222,6 +250,7 @@ export class TypeParser {
                 isClass: false,
                 isInterface: false,
                 isLiteral: true,
+                isEnumLiteral: false,
                 isPrimitive: false,
                 isTuple: false,
                 isArray: false,
@@ -274,6 +303,7 @@ export class TypeParser {
             isTuple: node.getType().isTuple(),
             isArray: node.getType().isArray(),
             isObject: node.getType().isObject(),
+            isEnum: node.getType().isEnum(),
         };
     }
 
@@ -364,7 +394,7 @@ export class TypeParser {
             }
         })
 
-        printMap(typeMap);
+        // printMap(typeMap);
         return typeMap;
     };
 }
@@ -397,6 +427,7 @@ export type TypeField = {
     isTuple: boolean
     isArray: boolean
     isObject: boolean
+    isEnum: boolean
 }
 
 export type TypeFieldDetails = {
@@ -404,8 +435,11 @@ export type TypeFieldDetails = {
     text?: TypeText | TypeText[]
     nestedTypeDetails?: TypeFieldDetails[]
     file?: string
+    enumFile?: string
     kind?: string
+    enumDefinition?: string
     isPrimitive: boolean
+    isEnumLiteral: boolean
     isLiteral: boolean
     isInterface: boolean
     isClass: boolean

@@ -1,9 +1,9 @@
 export interface withEnum {
     name: string
-    enum: Enum
+    enum: TestEnum
 }
 
-export enum Enum {
+export enum TestEnum {
     One = 1,
     Two = 2,
     Three = 3,

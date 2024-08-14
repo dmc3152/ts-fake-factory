@@ -51,6 +51,7 @@ export class FactoryWriter {
 
     generateContent = (outlines: TypesOutline[], outputPath: string, writeLocation: string) => {
         let importMap = new Map<string, Set<string>>();
+        let enumMap = new Map<string, string>();
 
         const typeBodies = outlines.map(typeOutline => {
             let text = '';
@@ -77,7 +78,9 @@ export class FactoryWriter {
                 hydratedText += `\t\tconst mock: ${typeOutline.name} = {\n`;
                 
                 typeOutline.fields.forEach(field => {
-                    importMap = this.generateImports(field, typeOutline, outputPath, writeLocation, importMap);
+                    const maps = this.generateImports(field, typeOutline, outputPath, writeLocation, importMap, enumMap);
+                    importMap = maps.importMap;
+                    enumMap = maps.enumMap;
 
                     const { typeDetails, hasUndefined, hasNull } = field.typeDetails.reduce((details, detail) => {
                         if (detail.text === 'undefined') {
@@ -134,11 +137,17 @@ export class FactoryWriter {
         });
 
         const imports = this.buildImportsFromMap(importMap);
+        const enums = this.buildEnumsFromMap(enumMap);
         const body = typeBodies.join('\n\n');
 
         let output = '';
         if (imports.length > 0) {
             output += imports;
+            output += '\n';
+        }
+
+        if (enums.length > 0) {
+            output += enums;
             output += '\n';
         }
 
@@ -150,6 +159,7 @@ export class FactoryWriter {
     writeTypeDetails = (typeDetails: TypeFieldDetails[], isHydrated: boolean, isObject: boolean): string => {
         return typeDetails.reduce((textArray, detail) => {
             if (detail.isInterface) textArray.push(`${detail.name}Mock.${isHydrated ? 'hydrated' : 'bare'}({}, [...stack, this._id])`);
+            else if (detail.isEnumLiteral) textArray.push(`${detail.text}`);
             else if (detail.isLiteral) textArray.push(typeof detail.text === 'string' ? `'${detail.text}'` : `${detail.text}`);
             else if (detail.isTuple && detail.nestedTypeDetails?.length) textArray.push(this.generateValue(detail.nestedTypeDetails, isHydrated, true, false, false));
             else if (detail.isArray && detail.nestedTypeDetails?.length) textArray.push(this.generateValue(detail.nestedTypeDetails, isHydrated, false, true, false));
@@ -209,7 +219,7 @@ export class FactoryWriter {
         return fieldText;
     }
 
-    generateImports = (field: TypeField, outline: TypesOutline, outputPath: string, writeLocation: string, importMap: Map<string, Set<string>>): Map<string, Set<string>> => {
+    generateImports = (field: TypeField, outline: TypesOutline, outputPath: string, writeLocation: string, importMap: Map<string, Set<string>>, enumMap: Map<string, string>): { importMap: Map<string, Set<string>>, enumMap: Map<string, string> } => {
         const typeDefinitionImport = new Set<string>();
         typeDefinitionImport.add(outline.name);
         const typeDefFilePath = path.relative(writeLocation, outline.file).replace(/\\/g, '/');
@@ -218,16 +228,28 @@ export class FactoryWriter {
         field.typeDetails.forEach(detail => {
             if (detail.isInterface) {
                 if (detail.file && detail.name) {
-                    const imports = importMap.has(detail.file) ? importMap.get(detail.file)! : new Set<string>();
-                    imports.add(`${detail.name}Mock`);
-                    let filePath = path.relative(writeLocation, this.buildFileLocation(detail.file, outputPath)).replace(/\\/g, '/');
+                    let filePath = path.relative(writeLocation, detail.file).replace(/\\/g, '/');
                     if (!filePath.startsWith('.')) filePath = `./${filePath}`;
+                    const imports = importMap.has(filePath) ? importMap.get(filePath)! : new Set<string>();
+                    imports.add(`${detail.name}Mock`);
                     importMap.set(filePath, imports);
+                }
+            }
+            else if (detail.isEnumLiteral) {
+                if (detail.enumFile) {
+                    let filePath = path.relative(writeLocation, detail.enumFile).replace(/\\/g, '/');
+                    if (!filePath.startsWith('.')) filePath = `./${filePath}`;
+                    const imports = importMap.has(filePath) ? importMap.get(filePath)! : new Set<string>();
+                    imports.add(`${detail.name}`);
+                    importMap.set(filePath, imports);
+                }
+                else {
+                    enumMap.set(detail.name!, detail.enumDefinition!);
                 }
             }
         });
 
-        return importMap;
+        return { importMap, enumMap };
     };
 
     buildImportsFromMap = (importMap: Map<string, Set<string>>): string => {
@@ -239,6 +261,12 @@ export class FactoryWriter {
         }, '');
         imports += 'import { faker } from "@faker-js/faker";\n';
         return imports;
+    }
+
+    buildEnumsFromMap = (enumMap: Map<string, string>): string => {
+        return Array.from(enumMap).map(([name, definition]) => {
+            return definition;
+        }).join('\n\n');
     }
 }
 
