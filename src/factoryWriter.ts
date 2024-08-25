@@ -57,7 +57,7 @@ export class FactoryWriter {
             let text = '';
             let bareText = '';
             let hydratedText = '';
-            if (typeOutline.isInterface) {
+            if (typeOutline.isInterface || typeOutline.isTypeAlias) {
                 text += `export class ${typeOutline.name}Mock {\n`;
                 text += `\tprivate static _id = "${typeOutline.file}-${typeOutline.name}";\n`;
                 text += `\tprivate static _maxDepth = 5;\n\n`;
@@ -220,9 +220,10 @@ export class FactoryWriter {
     }
 
     generateImports = (field: TypeField, outline: TypesOutline, outputPath: string, writeLocation: string, importMap: Map<string, Set<string>>, enumMap: Map<string, string>): { importMap: Map<string, Set<string>>, enumMap: Map<string, string> } => {
-        const typeDefinitionImport = new Set<string>();
-        typeDefinitionImport.add(outline.name);
         const typeDefFilePath = path.relative(writeLocation, outline.file).replace(/\\/g, '/');
+        const typeDefinitionImport = importMap.has(typeDefFilePath) ? importMap.get(typeDefFilePath)! : new Set<string>();
+        typeDefinitionImport.add(outline.name);
+
         importMap.set(typeDefFilePath, typeDefinitionImport);
 
         field.typeDetails.forEach(detail => {

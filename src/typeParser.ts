@@ -1,4 +1,4 @@
-import { InterfaceDeclaration, Project, PropertyDeclaration, PropertySignature, Type, ts, Node, SourceFile, SyntaxKind } from "ts-morph";
+import { InterfaceDeclaration, Project, PropertyDeclaration, PropertySignature, Type, ts, Node, SourceFile, SyntaxKind, TypeAliasDeclaration } from "ts-morph";
 
 type PrimitiveType = "string" | "number" | "boolean" | "object" | "bigint" | "unknown" | "undefined" | "null" | "void" | "never" | "symbol" | "any";
 type TypeText = PrimitiveType | string | number | ts.PseudoBigInt;
@@ -324,6 +324,24 @@ export class TypeParser {
             fields: properties.map(property => this.buildFieldFromProperty(property)),
             isExported: interfaceDeclaration.isExported(),
             isInterface: true,
+            isTypeAlias: false,
+            isClass: false
+        };
+
+        return outline;
+    }
+
+    createTypeOutlineFromTypeAlias = (typeAliasDeclaration: TypeAliasDeclaration, sourceFile: SourceFile): TypesOutline => {
+        const properties = typeAliasDeclaration.getType().getProperties().reduce((acc, x) => acc.concat(x.getDeclarations().filter(y => y.getKindName() === 'PropertySignature') as PropertySignature[]), [] as PropertySignature[]);
+        // const properties = typeAliasDeclaration.getProperties();
+
+        const outline: TypesOutline = {
+            name: typeAliasDeclaration.getName(),
+            file: sourceFile.getFilePath(),
+            fields: properties.map(property => this.buildFieldFromProperty(property)),
+            isExported: typeAliasDeclaration.isExported(),
+            isInterface: false,
+            isTypeAlias: true,
             isClass: false
         };
 
@@ -339,6 +357,34 @@ export class TypeParser {
         let typesWithoutFields = new Map<string, TypesOutline>();
 
         const interfaces = sourceFile.getInterfaces();
+        const types = sourceFile.getTypeAliases();
+
+        types.forEach(typeReference => {
+            const outline = this.createTypeOutlineFromTypeAlias(typeReference, sourceFile);
+            const key = this.getTypeKeyIfNotInMaps(outline, typeMap);
+            if (key) typeMap.set(key, outline);
+
+            outline.fields.forEach(field => {
+                typesWithoutFields = field.typeDetails.reduce((lookup, detail) => {
+                    if (!detail.name || !detail.file) return lookup;
+
+                    const newOutline: TypesOutline = {
+                        name: detail.name,
+                        file: detail.file,
+                        fields: [],
+                        isExported: false,
+                        isInterface: detail.isInterface,
+                        isTypeAlias: true,
+                        isClass: detail.isClass
+                    };
+
+                    const newTypeKey = this.getTypeKeyIfNotInMaps(newOutline, typeMap);
+                    if (newTypeKey) lookup.set(newTypeKey, newOutline);
+
+                    return lookup;
+                }, typesWithoutFields);
+            });
+        })
 
         interfaces.forEach(interfaceDeclaration => {
             const outline = this.createTypeOutlineFromInterface(interfaceDeclaration, sourceFile);
@@ -355,6 +401,7 @@ export class TypeParser {
                         fields: [],
                         isExported: false,
                         isInterface: detail.isInterface,
+                        isTypeAlias: false,
                         isClass: detail.isClass
                     };
 
@@ -415,6 +462,7 @@ export type TypesOutline = {
     fields: TypeField[]
     isExported: boolean
     isInterface: boolean
+    isTypeAlias: boolean
     isClass: boolean
 }
 
