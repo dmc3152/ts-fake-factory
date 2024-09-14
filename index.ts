@@ -4,7 +4,7 @@ import { TypeParser } from "./src/typeParser";
 
 // const generatedTypes = generateTypes("src/*.ts");
 const typeParser = new TypeParser();
-const generatedTypes = typeParser.generateTypes("spec/types/asType.ts");
+const generatedTypes = typeParser.generateTypes("spec/types/withTuple.ts");
 // const generatedTypes = typeParser.generateTypes("spec/types/primitivesInterface.ts");
 // generatedTypes.forEach(value => {
 //     console.log(value.fields);

@@ -158,7 +158,10 @@ export class FactoryWriter {
 
     writeTypeDetails = (typeDetails: TypeFieldDetails[], isHydrated: boolean, isObject: boolean): string => {
         return typeDetails.reduce((textArray, detail) => {
+            // console.log(detail);
             if (detail.isInterface) textArray.push(`${detail.name}Mock.${isHydrated ? 'hydrated' : 'bare'}({}, [...stack, this._id])`);
+            else if (detail.kind === 'TypeLiteral' && detail.name) textArray.push(`${detail.name}Mock.${isHydrated ? 'hydrated' : 'bare'}({}, [...stack, this._id])`);
+            else if (detail.kind === 'TypeLiteral' && detail.nestedTypeDetails) textArray.push(this.generateValue(detail.nestedTypeDetails, isHydrated, detail.isTuple, detail.isArray, detail.isObject));
             else if (detail.isEnumLiteral) textArray.push(`${detail.text}`);
             else if (detail.isLiteral) textArray.push(typeof detail.text === 'string' ? `'${detail.text}'` : `${detail.text}`);
             else if (detail.isTuple && detail.nestedTypeDetails?.length) textArray.push(this.generateValue(detail.nestedTypeDetails, isHydrated, true, false, false));
@@ -222,19 +225,31 @@ export class FactoryWriter {
     generateImports = (field: TypeField, outline: TypesOutline, outputPath: string, writeLocation: string, importMap: Map<string, Set<string>>, enumMap: Map<string, string>): { importMap: Map<string, Set<string>>, enumMap: Map<string, string> } => {
         const typeDefFilePath = path.relative(writeLocation, outline.file).replace(/\\/g, '/');
         const typeDefinitionImport = importMap.has(typeDefFilePath) ? importMap.get(typeDefFilePath)! : new Set<string>();
-        typeDefinitionImport.add(outline.name);
+        // console.log(outline);
+        if (outline.isExported) {
+            typeDefinitionImport.add(outline.name);
+        }
 
         importMap.set(typeDefFilePath, typeDefinitionImport);
 
         field.typeDetails.forEach(detail => {
             if (detail.isInterface) {
                 if (detail.file && detail.name) {
-                    let filePath = path.relative(writeLocation, detail.file).replace(/\\/g, '/');
-                    if (!filePath.startsWith('.')) filePath = `./${filePath}`;
-                    const imports = importMap.has(filePath) ? importMap.get(filePath)! : new Set<string>();
+                    const imports = importMap.has(detail.file) ? importMap.get(detail.file)! : new Set<string>();
                     imports.add(`${detail.name}Mock`);
-                    importMap.set(filePath, imports);
+                    let filePath = path.relative(writeLocation, this.buildFileLocation(detail.file, outputPath)).replace(/\\/g, '/');
+                    if (!filePath.startsWith('.')) filePath = `./${filePath}`;
+                    // if (filePath !== './') {
+                        importMap.set(filePath, imports);
+                    // }
                 }
+                // if (detail.file && detail.name) {
+                //     let filePath = path.relative(writeLocation, detail.file).replace(/\\/g, '/');
+                //     if (!filePath.startsWith('.')) filePath = `./${filePath}`;
+                //     const imports = importMap.has(filePath) ? importMap.get(filePath)! : new Set<string>();
+                //     imports.add(`${detail.name}Mock`);
+                //     importMap.set(filePath, imports);
+                // }
             }
             else if (detail.isEnumLiteral) {
                 if (detail.enumFile) {

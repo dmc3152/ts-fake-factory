@@ -14,9 +14,7 @@ export class withObjectMock {
 
 		const mock: withObject = {
 			name: faker.string.alphanumeric(),
-			object: {id: faker.number.int(),
-label: faker.string.alphanumeric(),
-nestedObject: {isCool: faker.datatype.boolean()}},
+			object: {id: faker.number.int(), label: faker.string.alphanumeric(), nestedObject: {isCool: faker.datatype.boolean()}},
 			...overrides
 		};
 
@@ -31,9 +29,7 @@ nestedObject: {isCool: faker.datatype.boolean()}},
 
 		const mock: withObject = {
 			name: faker.string.alphanumeric(),
-			object: {id: faker.number.int(),
-label: faker.string.alphanumeric(),
-nestedObject: {isCool: faker.datatype.boolean()}},
+			object: {id: faker.number.int(), label: faker.string.alphanumeric(), nestedObject: {isCool: faker.datatype.boolean()}},
 			...overrides
 		};
 

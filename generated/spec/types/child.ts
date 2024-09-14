@@ -1,5 +1,6 @@
-import { Child } from "../../../spec/types/child"
-import { GrandchildMock } from "./grandchild"
+import { Child } from "../../../spec/types/child";
+import { GrandchildMock } from "./grandchild";
+import { faker } from "@faker-js/faker";
 
 export class ChildMock {
 	private static _id = "C:/code/ts-fake-factory/spec/types/child.ts-Child";
@@ -13,8 +14,8 @@ export class ChildMock {
 		}
 
 		const mock: Child = {
-			location: 'string',
-			isActive: true,
+			location: faker.string.alphanumeric(),
+			isActive: faker.datatype.boolean(),
 			grandchild: GrandchildMock.hydrated({}, [...stack, this._id]),
 			...overrides
 		};
@@ -29,8 +30,8 @@ export class ChildMock {
 		}
 
 		const mock: Child = {
-			location: 'string',
-			isActive: true,
+			location: faker.string.alphanumeric(),
+			isActive: faker.datatype.boolean(),
 			grandchild: GrandchildMock.bare({}, [...stack, this._id]),
 			...overrides
 		};

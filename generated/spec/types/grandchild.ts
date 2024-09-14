@@ -1,4 +1,5 @@
-import { Grandchild } from "../../../spec/types/grandchild"
+import { Grandchild } from "../../../spec/types/grandchild";
+import { faker } from "@faker-js/faker";
 
 export class GrandchildMock {
 	private static _id = "C:/code/ts-fake-factory/spec/types/grandchild.ts-Grandchild";
@@ -12,7 +13,7 @@ export class GrandchildMock {
 		}
 
 		const mock: Grandchild = {
-			name: 'string',
+			name: faker.string.alphanumeric(),
 			...overrides
 		};
 
@@ -26,7 +27,7 @@ export class GrandchildMock {
 		}
 
 		const mock: Grandchild = {
-			name: 'string',
+			name: faker.string.alphanumeric(),
 			...overrides
 		};
 

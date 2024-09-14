@@ -1,4 +1,5 @@
-import { PrimitivesInterface } from "../../../spec/types/primitivesInterface"
+import { PrimitivesInterface } from "../../../spec/types/primitivesInterface";
+import { faker } from "@faker-js/faker";
 
 export class PrimitivesInterfaceMock {
 	private static _id = "C:/code/ts-fake-factory/spec/types/primitivesInterface.ts-PrimitivesInterface";
@@ -12,11 +13,11 @@ export class PrimitivesInterfaceMock {
 		}
 
 		const mock: PrimitivesInterface = {
-			number: 5,
-			string: 'string',
-			boolean: true,
+			number: faker.number.int(),
+			string: faker.string.alphanumeric(),
+			boolean: faker.datatype.boolean(),
 			object: {},
-			bigint: BigInt(99999999999),
+			bigint: faker.number.bigInt(),
 			unknown: {},
 			undefined: undefined,
 			null: null,
@@ -36,11 +37,11 @@ export class PrimitivesInterfaceMock {
 		}
 
 		const mock: PrimitivesInterface = {
-			number: 5,
-			string: 'string',
-			boolean: true,
+			number: faker.number.int(),
+			string: faker.string.alphanumeric(),
+			boolean: faker.datatype.boolean(),
 			object: {},
-			bigint: BigInt(99999999999),
+			bigint: faker.number.bigInt(),
 			unknown: {},
 			undefined: undefined,
 			null: null,

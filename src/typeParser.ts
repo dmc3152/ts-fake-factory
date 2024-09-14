@@ -56,7 +56,7 @@ export class TypeParser {
     extractListOfTypesFromPropertyNode = (node: PropertyDeclaration | PropertySignature): (Type<ts.Type> | Node<ts.Node>)[] => {
         // console.log('method called');
         const nodeSymbol = node.getType().getSymbol();
-        if (node.getType().isObject()) {
+        if (node.getType().isObject() && node.getType().isLiteral()) {
             return node.getType().getProperties().reduce((declarations, property) => {
                 const declarationType = property.getDeclarations().pop();
                 if (declarationType) {
@@ -172,6 +172,7 @@ export class TypeParser {
     }
 
     mapTypeDetails = (declarationType: Type<ts.Type> | Node<ts.Node>): TypeFieldDetails => {
+        // console.log(declarationType.getText(), declarationType.getSymbol()?.getName())
         let details: TypeFieldDetails = {
             name: declarationType.getSymbol()?.getName(),
             text: undefined,
@@ -192,6 +193,9 @@ export class TypeParser {
             const { text, typeDetails } = this.determineTypeText(typeDef);
             let enumDefinition: string | undefined;
             let name = declarationType.getSymbol()?.getName();
+            if (declarationType.getKindName() === 'TypeLiteral') {
+                name = text?.toString().startsWith('import("') ? text.toString().split('").')[1] : undefined;
+            }
             let enumFile: string | undefined;
             if (typeDef.isEnumLiteral()) {
                 const enumName = typeDef.getBaseTypeOfLiteralType().getSymbol()?.getName()!;
@@ -208,7 +212,7 @@ export class TypeParser {
                 name,
                 text,
                 nestedTypeDetails: typeDetails,
-                file: isNativeType || typeDef.isObject() ? undefined : declarationType.getSourceFile().getFilePath(),
+                file: isNativeType ? undefined : declarationType.getSourceFile().getFilePath(),
                 enumFile,
                 kind: declarationType.getKindName(),
                 enumDefinition,
@@ -261,8 +265,8 @@ export class TypeParser {
 
     buildFieldFromProperty = (node: PropertyDeclaration | PropertySignature): TypeField => {
         const typeList = this.extractListOfTypesFromPropertyNode(node);
+        // typeList.map(x => console.log(x))
         const typeDetails = typeList.map(declarationType => this.mapTypeDetails(declarationType));
-        // console.log(typeDetails)
         const booleanHandledTypeDetails = this.combineBooleanTypeDetails(typeDetails);
         const optionalHandledTypeDetails = this.handleOptionalTypeDetails(node, booleanHandledTypeDetails);
         
@@ -302,7 +306,7 @@ export class TypeParser {
             isReadOnly: node.isReadonly(),
             isTuple: node.getType().isTuple(),
             isArray: node.getType().isArray(),
-            isObject: node.getType().isObject(),
+            isObject: node.getType().isObject() && node.getType().isLiteral(),
             isEnum: node.getType().isEnum(),
         };
     }
@@ -361,6 +365,7 @@ export class TypeParser {
 
         types.forEach(typeReference => {
             const outline = this.createTypeOutlineFromTypeAlias(typeReference, sourceFile);
+            if (!outline.isExported) return;
             const key = this.getTypeKeyIfNotInMaps(outline, typeMap);
             if (key) typeMap.set(key, outline);
 
@@ -418,6 +423,7 @@ export class TypeParser {
 
     setNewTypesRecursively = (outlinesMap: Map<string, TypesOutline>, project: Project, typeMap: Map<string, TypesOutline>) => {
         outlinesMap.forEach((outline) => {
+            if (project.getSourceFile(outline.file)) return;
             const sourceFile = project.addSourceFileAtPath(outline.file);
             const newTypesWithoutFields = this.setTypesWithFieldsFromSourceFile(sourceFile, typeMap);
 
@@ -448,11 +454,11 @@ export class TypeParser {
 
 const printMap = (map: Map<string, TypesOutline>) => {
     [...map.entries()].forEach(entry => {
-        // console.log(entry[0]);
-        console.log(entry[1], entry[1].fields);
-        entry[1].fields.forEach(field => {
-            console.log(field.typeDetails);
-        })
+        console.log(entry[0]);
+        // console.log(entry[1], entry[1].fields);
+        // entry[1].fields.forEach(field => {
+        //     console.log(field.typeDetails);
+        // })
     })
 }
 

@@ -1,5 +1,6 @@
-import { Parent } from "../../../spec/types/parent"
-import { ChildMock } from "./child"
+import { Parent } from "../../../spec/types/parent";
+import { ChildMock } from "./child";
+import { faker } from "@faker-js/faker";
 
 export class ParentMock {
 	private static _id = "C:/code/ts-fake-factory/spec/types/parent.ts-Parent";
@@ -13,8 +14,8 @@ export class ParentMock {
 		}
 
 		const mock: Parent = {
-			id: 5,
-			name: 'string',
+			id: faker.number.int(),
+			name: faker.string.alphanumeric(),
 			child: ChildMock.hydrated({}, [...stack, this._id]),
 			...overrides
 		};
@@ -29,8 +30,8 @@ export class ParentMock {
 		}
 
 		const mock: Parent = {
-			id: 5,
-			name: 'string',
+			id: faker.number.int(),
+			name: faker.string.alphanumeric(),
 			child: ChildMock.bare({}, [...stack, this._id]),
 			...overrides
 		};
